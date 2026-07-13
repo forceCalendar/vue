@@ -1,6 +1,6 @@
 {
   "name": "@forcecalendar/vue",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Vue 3 adapter for forceCalendar - enterprise calendar Web Components",
   "type": "module",
   "main": "dist/index.js",
@@ -22,12 +22,12 @@
   },
   "peerDependencies": {
     "@forcecalendar/core": ">=2.0.0",
-    "@forcecalendar/interface": ">=1.1.0",
+    "@forcecalendar/interface": ">=1.2.0",
     "vue": ">=3.3"
   },
   "devDependencies": {
     "@forcecalendar/core": "^2.3.0",
-    "@forcecalendar/interface": "^1.1.0",
+    "@forcecalendar/interface": "^1.2.0",
     "@vue/server-renderer": "^3.5.0",
     "typescript": "^5",
     "vue": "^3.5.0"
