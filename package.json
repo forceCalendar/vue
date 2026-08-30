@@ -5,11 +5,13 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -18,19 +20,35 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node test/smoke.mjs"
+    "test": "npm run build && tsc -p tsconfig.test.json --noEmit && node --test \"test/*.mjs\""
   },
   "peerDependencies": {
-    "@forcecalendar/core": ">=2.0.0",
-    "@forcecalendar/interface": ">=1.2.0",
+    "@forcecalendar/core": ">=2.0.0 <3",
+    "@forcecalendar/interface": ">=1.6.0 <2",
     "vue": ">=3.3"
   },
   "devDependencies": {
-    "@forcecalendar/core": "^2.3.0",
-    "@forcecalendar/interface": "^1.2.0",
+    "@forcecalendar/core": "^2.5.0",
+    "@forcecalendar/interface": "^1.6.0",
     "@vue/server-renderer": "^3.5.0",
+    "jsdom": "^29.1.1",
     "typescript": "^5",
     "vue": "^3.5.0"
+  },
+  "keywords": [
+    "calendar",
+    "vue",
+    "vue3",
+    "web-components",
+    "custom-elements",
+    "forcecalendar",
+    "salesforce",
+    "scheduler",
+    "events"
+  ],
+  "homepage": "https://forcecalendar.org",
+  "bugs": {
+    "url": "https://github.com/forceCalendar/vue/issues"
   },
   "repository": {
     "type": "git",
