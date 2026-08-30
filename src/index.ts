@@ -21,6 +21,9 @@ export type {
 
 const TAG = 'forcecal-main';
 
+/** Oldest @forcecalendar/interface release whose element API this adapter relies on. */
+const MIN_INTERFACE_VERSION = '1.6.0';
+
 export type NavigateDetail = ForceCalendarEventMap['calendar-navigate'];
 export type ViewChangeDetail = ForceCalendarEventMap['calendar-view-change'];
 export type DateSelectDetail = ForceCalendarEventMap['calendar-date-select'];
@@ -65,6 +68,19 @@ const emits = {
   rangeSelect: (_detail: RangeSelectDetail) => true,
 };
 
+/** Registers the custom elements; client-side only, so SSR never touches it. */
+function loadInterface(): Promise<void> {
+  return import('@forcecalendar/interface').then(
+    () => undefined,
+    (error: unknown) => {
+      console.error(
+        `[@forcecalendar/vue] failed to load @forcecalendar/interface (>= ${MIN_INTERFACE_VERSION} required)`,
+        error,
+      );
+    },
+  );
+}
+
 function toDateAttribute(date: Date | string | undefined): string | undefined {
   return date instanceof Date ? date.toISOString() : date;
 }
@@ -89,8 +105,7 @@ export const ForceCalendar = defineComponent({
     const forward = emit as unknown as (name: EmitName, detail: unknown) => void;
 
     onMounted(() => {
-      // Register the custom elements client-side only — safe under SSR
-      import('@forcecalendar/interface');
+      loadInterface();
       const node = el.value;
       if (!node) return;
       for (const [domName, emitName] of EVENT_PAIRS) {
