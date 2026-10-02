@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && tsc -p tsconfig.test.json --noEmit && node --test \"test/*.mjs\""
+    "test": "npm run build && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.test.nodenext.json --noEmit && node --test \"test/*.mjs\""
   },
   "peerDependencies": {
     "@forcecalendar/core": ">=2.0.0 <3",
@@ -28,8 +28,8 @@
     "vue": ">=3.3"
   },
   "devDependencies": {
-    "@forcecalendar/core": "^2.5.0",
-    "@forcecalendar/interface": "^1.6.0",
+    "@forcecalendar/core": "^2.5.5",
+    "@forcecalendar/interface": "^1.8.0",
     "@vue/server-renderer": "^3.5.0",
     "jsdom": "^29.1.1",
     "typescript": "^5",

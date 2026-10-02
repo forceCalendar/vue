@@ -2,7 +2,7 @@
 // <forcecal-main> that records every call and listener change, and mimics the
 // two behaviours of the real element the adapter depends on — re-applying an
 // `events` snapshot assigned before upgrade, and announcing the initial
-// visible range synchronously while connecting.
+// visible range synchronously (interface 1.6) or deferred (interface 1.7).
 //
 // The module is a no-op without DOM globals so the test runner can load it
 // on its own without failing.
@@ -14,6 +14,7 @@ if (typeof HTMLElement !== 'undefined' && !customElements.get('forcecal-main')) 
 
   class StubForceCalendar extends HTMLElement {
     static instances = [];
+    static initialRangeTiming = 'sync';
 
     constructor() {
       super();
@@ -33,11 +34,25 @@ if (typeof HTMLElement !== 'undefined' && !customElements.get('forcecal-main')) 
         this.events = value;
       }
       const dateAttr = this.getAttribute('date');
-      this.dispatch('calendar-range-change', {
+      const detail = {
         ...VISIBLE_RANGE,
         view: this.getAttribute('view') || 'month',
         date: dateAttr ? new Date(dateAttr) : new Date(),
-      });
+      };
+      if (StubForceCalendar.initialRangeTiming === 'none') return;
+      if (StubForceCalendar.initialRangeTiming === 'deferred') {
+        this.initialRangeTimer = setTimeout(() => {
+          this.initialRangeTimer = undefined;
+          this.dispatch('calendar-range-change', detail);
+        }, 0);
+      } else {
+        this.dispatch('calendar-range-change', detail);
+      }
+    }
+
+    disconnectedCallback() {
+      clearTimeout(this.initialRangeTimer);
+      this.initialRangeTimer = undefined;
     }
 
     dispatch(name, detail) {

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "declaration": false,
-    "rootDir": "."
+    "rootDir": ".",
+    "skipLibCheck": false
   },
-  "include": ["src", "test/types.ts"]
+  "include": ["test/types.ts"]
 }
