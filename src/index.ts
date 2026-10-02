@@ -177,6 +177,8 @@ export const ForceCalendar = defineComponent({
     weekStartsOn: { type: Number as PropType<0 | 1 | 2 | 3 | 4 | 5 | 6>, default: undefined },
     height: { type: String, default: undefined },
     theme: { type: String as PropType<CalendarTheme>, default: undefined },
+    /** Disable interactive editing (interface >= 1.8.0). */
+    readOnly: { type: Boolean, default: false },
     /**
      * Complete snapshot of the calendar's events. Applied through
      * `setEvents()` (never as an attribute) whenever the array identity
@@ -355,6 +357,9 @@ export const ForceCalendar = defineComponent({
         'week-starts-on': props.weekStartsOn,
         height: props.height,
         theme: props.theme,
+        // Boolean HTML attributes are true by presence, even when set to "false".
+        // Use the lowercase attribute explicitly so cold and upgraded elements agree.
+        readonly: props.readOnly ? '' : undefined,
       });
   },
 });

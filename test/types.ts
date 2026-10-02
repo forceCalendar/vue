@@ -21,6 +21,7 @@ export const valid: Props = {
   view: 'week',
   weekStartsOn: 1,
   theme: 'slds',
+  readOnly: false,
   date: new Date(),
   events: [{ id: '1', title: 'Standup', start: '2026-08-31T09:00:00Z' }],
   removeMissingEvents: false,
@@ -70,3 +71,10 @@ handle.addEvent({ start: '2026-09-01' });
 handle.updateEvent('plain', { title: 'Updated' });
 export const queried: ForceCalendarElement | null =
   document.querySelector<ForceCalendarElement>('forcecal-main');
+
+export const readOnlyElement = (el: ForceCalendarElement): boolean => {
+  el.readOnly = true;
+  return el.readOnly;
+};
+// @ts-expect-error readOnly is a boolean, not an HTML attribute string
+export const invalidReadOnly: Props = { readOnly: "false" };
