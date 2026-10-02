@@ -71,6 +71,8 @@ export interface ForceCalendarEventMap {
 
 /** The upgraded `<forcecal-main>` element. */
 export interface ForceCalendarElement extends HTMLElement {
+  /** Disable interactive editing (interface >= 1.8.0); programmatic methods remain available. */
+  readOnly: boolean;
   /** Declarative form of `setEvents(events)`; reading returns the events currently held. */
   events: CalendarEvent[];
   setEvents(events: Iterable<CalendarEvent>, options?: EventsSetOptions): EventsSetResult | null;

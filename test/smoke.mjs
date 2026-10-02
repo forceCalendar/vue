@@ -48,3 +48,11 @@ test('never serialises the events snapshot or listener props', async () => {
   assert.doesNotMatch(html, /remove-missing-events/i);
   assert.doesNotMatch(html, /range-change|events-set/i);
 });
+
+for (const readOnly of [true, false, undefined]) {
+  test(`SSR readOnly=${readOnly} uses boolean attribute presence`, async () => {
+    const html = await render({ readOnly });
+    if (readOnly) assert.match(html, /\sreadonly(?:="")?(?:\s|>)/i);
+    else assert.doesNotMatch(html, /\sreadonly(?:=|\s|>)/i);
+  });
+}
