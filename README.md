@@ -139,7 +139,9 @@ onMounted(async () => {
 
 ## Types
 
-Registering the component globally (`app.component('ForceCalendar', ForceCalendar)`) is typed in templates through Vue's `GlobalComponents` augmentation. The package also exports `CalendarEvent`, `CalendarView`, `CalendarTheme`, `VisibleRange`, `EventsSetOptions`, `EventsSetResult`, `EventsSetUpdate`, `ForceCalendarElement`, `ForceCalendarEventMap`, `ForceCalendarHandle` and one `*Detail` type per emit, and declares `forcecal-main` in `HTMLElementTagNameMap` so `document.querySelector('forcecal-main')` is typed.
+Registering the component globally (`app.component('ForceCalendar', ForceCalendar)`) is typed in templates through Vue's `GlobalComponents` augmentation. The package also exports `CalendarEvent`, `CalendarView`, `CalendarTheme`, `VisibleRange`, `EventsSetOptions`, `EventsSetResult`, `EventsSetUpdate`, `ForceCalendarElement`, `ForceCalendarEventMap`, `ForceCalendarHandle` and one `*Detail` type per emit. Event inputs remain structural, so plain objects are accepted.
+
+`@forcecalendar/interface` 1.7 and later owns the global `HTMLElementTagNameMap` declaration for `forcecal-main`. Load its declarations with `import type {} from '@forcecalendar/interface'` to get automatic typing for direct DOM queries. The adapter does not redeclare it, avoiding conflicts when both packages' types are loaded. When using interface 1.6, import `ForceCalendarElement` from this adapter and annotate direct DOM queries explicitly, for example `document.querySelector<ForceCalendarElement>('forcecal-main')`. Component props, emits and template refs keep the same types on both versions.
 
 ## SSR
 

@@ -11,7 +11,9 @@
 import {
   defineComponent,
   h,
+  onActivated,
   onBeforeUnmount,
+  onDeactivated,
   onMounted,
   ref,
   watch,
@@ -26,7 +28,7 @@ import type {
   ForceCalendarElement,
   ForceCalendarEventMap,
   VisibleRange,
-} from './dom-types';
+} from './dom-types.js';
 
 export type {
   CalendarEvent,
@@ -38,7 +40,7 @@ export type {
   ForceCalendarElement,
   ForceCalendarEventMap,
   VisibleRange,
-} from './dom-types';
+} from './dom-types.js';
 
 const TAG = 'forcecal-main';
 
@@ -190,6 +192,18 @@ export const ForceCalendar = defineComponent({
     const listeners: Array<[DomEventName, EventListener]> = [];
     let rangeChangeSeen = false;
     let unmounted = false;
+    let deactivated = false;
+    let initialRangeTimer: ReturnType<typeof setTimeout> | undefined;
+    let initialRangeGeneration = 0;
+
+    const cancelInitialRange = (): void => {
+      // Invalidate readiness promises too, including one awaiting lazy define.
+      initialRangeGeneration += 1;
+      if (initialRangeTimer !== undefined) {
+        clearTimeout(initialRangeTimer);
+        initialRangeTimer = undefined;
+      }
+    };
 
     // Vue types `emit` as an intersection of one signature per event, which a
     // union of names cannot satisfy; the map above is the single source of truth.
@@ -227,13 +241,14 @@ export const ForceCalendar = defineComponent({
     };
 
     /**
-     * The element announces its initial visible window synchronously while it
-     * connects. When it was already defined at mount time that happens before
-     * our listeners exist, so report the window once the element is ready.
+     * Interface 1.6 announces its initial visible window synchronously while
+     * connecting, before our listeners exist when the element is already
+     * defined. Interface 1.7 defers that announcement, so wait one task after
+     * readiness before supplying the legacy fallback. A real range event wins.
      * `view`/`date` mirror the defaults the element derives from its attributes.
      */
     const reportInitialRange = (node: ForceCalendarElement): void => {
-      if (unmounted || rangeChangeSeen || typeof node.getVisibleRange !== 'function') return;
+      if (unmounted || deactivated || rangeChangeSeen || typeof node.getVisibleRange !== 'function') return;
       const range = node.getVisibleRange();
       if (!range) return;
       rangeChangeSeen = true;
@@ -246,6 +261,18 @@ export const ForceCalendar = defineComponent({
       forward('rangeChange', detail);
     };
 
+    const scheduleInitialRange = (): void => {
+      cancelInitialRange();
+      const generation = initialRangeGeneration;
+      whenReady().then(node => {
+        if (unmounted || deactivated || rangeChangeSeen || generation !== initialRangeGeneration) return;
+        initialRangeTimer = setTimeout(() => {
+          initialRangeTimer = undefined;
+          reportInitialRange(node);
+        }, 0);
+      }, () => undefined);
+    };
+
     onMounted(() => {
       const node = el.value;
       if (!node) return;
@@ -253,7 +280,10 @@ export const ForceCalendar = defineComponent({
       // Listeners first, so nothing dispatched while the element upgrades is lost.
       for (const [domName, emitName] of EVENT_PAIRS) {
         const listener: EventListener = event => {
-          if (domName === 'calendar-range-change') rangeChangeSeen = true;
+          if (domName === 'calendar-range-change') {
+            rangeChangeSeen = true;
+            cancelInitialRange();
+          }
           forward(emitName, (event as CustomEvent).detail ?? {});
         };
         node.addEventListener(domName, listener);
@@ -263,13 +293,24 @@ export const ForceCalendar = defineComponent({
       resolveMounted();
       loadInterface();
       applyEvents(props.events);
-      whenReady().then(reportInitialRange, () => undefined);
+      scheduleInitialRange();
     });
 
     watch(() => props.events, applyEvents);
 
+    onDeactivated(() => {
+      deactivated = true;
+      cancelInitialRange();
+    });
+
+    onActivated(() => {
+      deactivated = false;
+      if (!rangeChangeSeen) scheduleInitialRange();
+    });
+
     onBeforeUnmount(() => {
       unmounted = true;
+      cancelInitialRange();
       const node = el.value;
       if (!node) return;
       for (const [domName, listener] of listeners) {

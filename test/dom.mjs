@@ -92,7 +92,12 @@ function collectors(names = Object.values(DOM_EVENTS)) {
   return { received, listeners };
 }
 
-const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+// Readiness resolves in a microtask and may schedule a fallback timer after
+// the first task was queued by a test. Drain both turns before counting emits.
+const settle = async () => {
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+};
 
 // This test must run first: it relies on `forcecal-main` not being defined yet.
 test('applies the events snapshot as a property before upgrade and never as an attribute', async () => {
@@ -239,6 +244,113 @@ test('reports the initial visible range when the element was defined before moun
   assert.equal(detail.date.toISOString(), '2026-08-30T00:00:00.000Z');
   assert.equal(el.callsTo('getVisibleRange').length, 1);
   unmount();
+});
+
+test('waits for a deferred initial DOM range event instead of duplicating it', async () => {
+  globalThis.__forcecalStub.initialRangeTiming = 'deferred';
+  const { received, listeners } = collectors(['onRangeChange']);
+  const { el, handle, unmount } = mount({ view: 'week', ...listeners });
+  try {
+    await handle.value.whenReady();
+    assert.equal(received.onRangeChange.length, 0, 'no synthetic emit before the DOM event');
+    await settle();
+    assert.equal(received.onRangeChange.length, 1);
+    assert.equal(el.callsTo('getVisibleRange').length, 0, 'the real announcement wins');
+
+    // Identical later events are real events, not duplicate readiness notices.
+    const detail = received.onRangeChange[0];
+    el.dispatch('calendar-range-change', detail);
+    el.dispatch('calendar-range-change', detail);
+    assert.deepEqual(received.onRangeChange, [detail, detail, detail]);
+  } finally {
+    unmount();
+    globalThis.__forcecalStub.initialRangeTiming = 'sync';
+  }
+});
+
+test('a real range event cancels a pending legacy readiness fallback', async () => {
+  const { received, listeners } = collectors(['onRangeChange']);
+  const { el, handle, unmount } = mount({ view: 'month', ...listeners });
+  try {
+    await handle.value.whenReady();
+    const detail = { start: new Date('2026-09-01'), end: new Date('2026-09-30'), view: 'month', date: new Date('2026-09-01') };
+    el.dispatch('calendar-range-change', detail);
+    await settle();
+    assert.deepEqual(received.onRangeChange, [detail]);
+    assert.equal(el.callsTo('getVisibleRange').length, 0);
+  } finally {
+    unmount();
+  }
+});
+
+test('reports a fallback range when the element emits no initial announcement', async () => {
+  globalThis.__forcecalStub.initialRangeTiming = 'none';
+  const { received, listeners } = collectors(['onRangeChange']);
+  const { el, unmount } = mount({ view: 'day', ...listeners });
+  try {
+    await settle();
+    assert.equal(received.onRangeChange.length, 1);
+    assert.equal(received.onRangeChange[0].view, 'day');
+    assert.equal(el.callsTo('getVisibleRange').length, 1);
+  } finally {
+    unmount();
+    globalThis.__forcecalStub.initialRangeTiming = 'sync';
+  }
+});
+
+test('cancels the legacy readiness fallback on unmount, including repeated mounts', async () => {
+  const { received, listeners } = collectors(['onRangeChange']);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { el, handle, unmount } = mount({ view: 'month', ...listeners });
+    await handle.value.whenReady();
+    unmount();
+    await settle();
+    assert.equal(received.onRangeChange.length, 0);
+    assert.equal(el.callsTo('getVisibleRange').length, 0);
+  }
+  const mounted = mount({ view: 'month', ...listeners });
+  try {
+    await settle();
+    assert.equal(received.onRangeChange.length, 1, 'a later mount still receives its fallback');
+    assert.equal(mounted.el.callsTo('getVisibleRange').length, 1);
+  } finally {
+    mounted.unmount();
+  }
+});
+
+test('does not schedule a fallback when unmounted before readiness resolves', async () => {
+  const { received, listeners } = collectors(['onRangeChange']);
+  const { el, unmount } = mount({ view: 'month', ...listeners });
+  unmount();
+  await settle();
+  assert.equal(received.onRangeChange.length, 0);
+  assert.equal(el.callsTo('getVisibleRange').length, 0);
+});
+
+test('KeepAlive cancels an interrupted initial fallback and resumes it on activation', async () => {
+  for (const timing of ['sync', 'deferred', 'none']) {
+    globalThis.__forcecalStub.initialRangeTiming = timing;
+    const { received, listeners } = collectors(['onRangeChange']);
+    const mounted = mount({ view: 'month', ...listeners }, { keepAlive: true });
+    try {
+      await mounted.handle.value.whenReady();
+      mounted.show.value = false;
+      await nextTick();
+      await settle();
+      assert.equal(received.onRangeChange.length, 0, `${timing}: no emit while deactivated`);
+      assert.equal(mounted.el.callsTo('getVisibleRange').length, 0);
+
+      mounted.show.value = true;
+      await nextTick();
+      await settle();
+      assert.equal(mounted.handle.value.element, mounted.el);
+      assert.equal(received.onRangeChange.length, 1, `${timing}: initial range after reactivation`);
+      assert.equal(mounted.el.callsTo('getVisibleRange').length, timing === 'none' ? 1 : 0);
+    } finally {
+      mounted.unmount();
+      globalThis.__forcecalStub.initialRangeTiming = 'sync';
+    }
+  }
 });
 
 test('exposed handle proxies methods to the element', async () => {

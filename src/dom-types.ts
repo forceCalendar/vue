@@ -1,9 +1,9 @@
 /**
  * Structural types for the `<forcecal-main>` element shipped by
- * @forcecalendar/interface (>= 1.6.0). @forcecalendar/interface does not
- * publish these declarations yet, so the adapter carries its own copy; they
- * describe the element's public surface only and are re-exported from the
- * package entry point.
+ * @forcecalendar/interface (>= 1.6.0). These remain structural so plain event
+ * objects and legacy interface releases are supported. The interface package
+ * owns the global DOM tag declarations; the adapter exports its own public
+ * surface without introducing a conflicting HTMLElementTagNameMap entry.
  */
 
 export type CalendarView = 'month' | 'week' | 'day';
@@ -104,10 +104,4 @@ export interface ForceCalendarElement extends HTMLElement {
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions,
   ): void;
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'forcecal-main': ForceCalendarElement;
-  }
 }

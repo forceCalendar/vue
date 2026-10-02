@@ -1,7 +1,11 @@
-// Compile-time assertions, checked by `tsc -p tsconfig.test.json --noEmit`.
+// Compile-time assertions against emitted declarations, checked with both
+// Bundler and NodeNext module resolution by npm test.
 // Each `@ts-expect-error` line fails the build if the following statement
 // stops being a type error.
 import type { GlobalComponents } from 'vue';
+// Load the interface's own global DOM declarations beside the shipped adapter
+// declarations. With skipLibCheck disabled this catches conflicting tag maps.
+import type {} from '@forcecalendar/interface';
 import {
   ForceCalendar,
   type CalendarEvent,
@@ -9,7 +13,7 @@ import {
   type ForceCalendarElement,
   type ForceCalendarHandle,
   type RangeChangeDetail,
-} from '../src/index';
+} from '../dist/index.js';
 
 type Props = InstanceType<typeof ForceCalendar>['$props'];
 
@@ -58,3 +62,11 @@ export const firstVisibleDay: Promise<Date | undefined> = handle
 export const added: CalendarEvent | null | undefined = handle.addEvent({ id: 'x', start: new Date() });
 export const typedListener = (el: ForceCalendarElement): void =>
   el.addEventListener('calendar-range-select', e => e.detail.start.getTime());
+
+// Structural inputs must not become the core's CalendarEvent class type.
+export const plainEvent: CalendarEvent = { id: 'plain', start: '2026-09-01', custom: true };
+handle.setEvents([plainEvent]);
+handle.addEvent({ start: '2026-09-01' });
+handle.updateEvent('plain', { title: 'Updated' });
+export const queried: ForceCalendarElement | null =
+  document.querySelector<ForceCalendarElement>('forcecal-main');
